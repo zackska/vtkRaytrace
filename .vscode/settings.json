@@ -1,0 +1,10 @@
+{
+    "C_Cpp.default.includePath": [
+        "C:/Users/ZFARPP/Dropbox/Academic Career/Chalmers/Projects/Diffuse Light Imaging Utility/VTK/**"
+    ],
+    "cmake.cmakePath": "C:/Program Files/CMake/bin/cmake",
+    "cmake.configureSettings": {
+    
+    },
+    "cmake.generator": "C:\\Program Files\\CMake\\share\\cmake-3.19\\Help\\generator"
+}

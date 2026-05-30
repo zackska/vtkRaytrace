@@ -1,0 +1,14 @@
+{
+    "tasks": [
+        {
+            "type": "cppbuild",
+            "label": "C/C++: cpp.exe build active file",
+            "command": "C:\\scania\\ProgramsForBuild\\MinGw\\5.1.4\\bin\\cpp.exe",
+            "detail": "compiler: C:\\scania\\ProgramsForBuild\\MinGw\\5.1.4\\bin\\cpp.exe",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        }
+    ] 
+}
