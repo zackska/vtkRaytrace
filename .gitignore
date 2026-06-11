@@ -1,0 +1,8 @@
+# Build artifacts
+build/
+
+# Local backups from the macOS -> headless Linux port
+*.orig
+
+# Vendored/downloaded build-env deps (utf8cpp); not referenced by CMakeLists
+deps/

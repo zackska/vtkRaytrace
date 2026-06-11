@@ -6,6 +6,8 @@
 #include <vtkSTLReader.h>
 #include <vtkSmartPointer.h>
 #include <vtkOBBTree.h>
+#include <vtkStaticCellLocator.h>
+#include <vtkAbstractCellLocator.h>
 #include <vtkPointLocator.h>
 #include "meshTools.h"
 #include <vtkPoints.h>
@@ -56,7 +58,7 @@ void plotSurfaces(double (*p1)[3], int  n_points1, double (*p2)[3], int n_points
 
 //functions for ray tracing calculation
 
-double trace(double *source, double *target, int depth, vtkRenderer *&render);
+double trace(double *source, double *target, int depth, vtkRenderer *&render, bool insideMedium = false);
 
 void visibilityTrace();
 
@@ -80,6 +82,13 @@ double *cameraPos; // define a 3-dimensional point for the centroid of the canva
 double *perspectivePoint;
 char *fileType;
 
+// Thin-lens objective: finite collection aperture + focus plane (vs the default pinhole).
+double m_cameraX[3];      // in-plane (transverse) camera axes
+double m_cameraZ[3];
+double m_focusCenter[3];  // a point on the focus plane (normal = opticalAxis)
+double m_apertureRadius;  // lens aperture radius (0 => pinhole)
+double m_fNumber;         // f-number (focusDist/(2*aperture)); large => pinhole
+
 
 // auxiliary variables used in tracing algorithm
 int depthLimit;
@@ -95,7 +104,9 @@ bool calcIndex; // specify whether or not to calculate the refractive index of t
 
 //scene and mesh parameters
 vtkPolyData *mesh;
-vtkOBBTree *meshOBBTree;
+vtkAbstractCellLocator *meshOBBTree; // vtkStaticCellLocator (thread-safe queries)
+double m_meshLength;      // cached mesh->GetLength() (GetLength/GetCenter write shared
+double m_meshCenter[3];   // buffers -> not thread-safe to call inside the parallel loop)
 vtkScalarsToColors *colorLookupTable;	
 double *opticalAxis;// define the distance between the simulated image plane and the perspective point;
 double glassIndex; // refractive index of transmissive material.

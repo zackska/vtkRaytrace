@@ -179,8 +179,9 @@ void meshTools::displayAll(vtkPolyData *mesh, double chip_size, double imageLoc,
 
 void meshTools::gridScalarContours(vtkStructuredGrid *grid, vtkPolyData *mesh, int nContours)
 {
-	// Assign density as scalar to calculate contours with
-		grid->GetCellData()->SetScalars(mesh->GetCellData()->GetArray("rho_s"));
+	// Assign refractive-index field as scalar to contour with. NOTE: read "rho_s" from the
+	// input GRID (was mesh, the empty output polydata -> null). rho_s must hold n = 1+K_GD*rho.
+		grid->GetCellData()->SetScalars(grid->GetCellData()->GetArray("rho_s"));
 
 		// Transfer density from cells to points
 		vtkCellDataToPointData *cell2point = vtkCellDataToPointData::New();
@@ -216,33 +217,29 @@ void meshTools::gridScalarContours(vtkStructuredGrid *grid, vtkPolyData *mesh, i
 		colorLookupTable->SetRange(range);
 		colorLookupTable->Build();
  
-		// Generate the colors for each point based on the color map
-		vtkIntArray *colors = vtkIntArray::New();
-		colors->SetNumberOfComponents(3);
-		colors->SetName("Colors");
-
-		vtkDoubleArray* index =  vtkDoubleArray::New();
-		index->SetNumberOfComponents(1);
-		index->SetName("index ratio");
-
 		//isolate density contours one by one and assign refractive index ratio to them
 		for(int k = 1; k<nContours-1;k++)
 		{
 			filter->SetValue(0, contourValues[k]);
 			filter->Update();
-	
+
 			vtkPolyData *tempMesh = vtkPolyData::New();
 			tempMesh->DeepCopy(filter->GetOutput());
-			
-			//assign index ratio to cells for later use in ray tracing
+
+			// PER-SHELL arrays (were allocated once outside the loop and resized each
+			// iteration -> every shell ended up sharing the LAST shell's array, corrupting
+			// the index ratios and overrunning on append). Allocate fresh each shell.
+			vtkDoubleArray* index = vtkDoubleArray::New();
+			index->SetNumberOfComponents(1); index->SetName("index ratio");
 			index->SetNumberOfTuples(tempMesh->GetNumberOfCells());
 			index->FillComponent(0, contourValues[k]/contourValues[k+1]);
-
-			// The data is added to FIELD data (rather than POINT data as usual)
 			tempMesh->GetCellData()->AddArray(index);
-			
-			// add colors for plotting
-			double* dcolor= new double;
+			index->Delete();   // tempMesh keeps a reference
+
+			// add colors for plotting (dcolor was `new double` (1 elem) used as a 3-vector)
+			vtkIntArray *colors = vtkIntArray::New();
+			colors->SetNumberOfComponents(3); colors->SetName("Colors");
+			double dcolor[3] = {0,0,0};
 			colorLookupTable->GetColor(contourValues[k], dcolor);
 			colors->SetNumberOfTuples(tempMesh->GetNumberOfPoints());
 			for(int l=0;l<3;l++)
@@ -251,6 +248,7 @@ void meshTools::gridScalarContours(vtkStructuredGrid *grid, vtkPolyData *mesh, i
 			}
 
 			tempMesh->GetCellData()->SetScalars(colors);
+			colors->Delete();   // tempMesh keeps a reference
 			// add to appendPolyData filter
 			append->AddInputData(tempMesh);
 			tempMesh->Delete();
