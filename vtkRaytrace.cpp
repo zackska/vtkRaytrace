@@ -64,14 +64,6 @@ void vtkRaytrace::readMesh(char *inputFilename, int nContours)
 		meshTools::gridScalarContours(grid, mesh, nContours);
 	}
 
-	// Cell locator for ray/mesh intersection. vtkStaticCellLocator is immutable after
-	// BuildLocator() and its IntersectWithLine(...,vtkGenericCell*) is thread-safe — unlike
-	// vtkOBBTree, whose traversal keeps mutable internal state and segfaults under OpenMP.
-	meshOBBTree = vtkStaticCellLocator::New();
-	meshOBBTree->SetDataSet(mesh);
-	meshOBBTree->CacheCellBoundsOn();
-	meshOBBTree->BuildLocator();
-
 	//Populate mesh normals for access in loop
 	vtkPolyDataNormals *normal =
 	vtkPolyDataNormals::New();
@@ -87,6 +79,18 @@ void vtkRaytrace::readMesh(char *inputFilename, int nContours)
 
 	mesh->DeepCopy(normal->GetOutput());
 	normal->Delete();
+
+	// Cell locator for ray/mesh intersection. vtkStaticCellLocator is immutable after
+	// BuildLocator() and its IntersectWithLine(...,vtkGenericCell*) is thread-safe — unlike
+	// vtkOBBTree, whose traversal keeps mutable internal state and segfaults under OpenMP.
+	// MUST be built AFTER the normals/DeepCopy: VTK 9.2 vtkContourFilter emits triangle
+	// STRIPS, which vtkPolyDataNormals de-strips into individual triangles (~2x the cell
+	// count). Building the locator on the pre-normals mesh left its cell ids referencing the
+	// strip topology while trace() read the de-stripped mesh -> 2x array overrun / SIGSEGV.
+	meshOBBTree = vtkStaticCellLocator::New();
+	meshOBBTree->SetDataSet(mesh);
+	meshOBBTree->CacheCellBoundsOn();
+	meshOBBTree->BuildLocator();
 	//delete[] stlName;
 
 	// Cache mesh metrics now (serial) — GetLength()/GetCenter() write shared member

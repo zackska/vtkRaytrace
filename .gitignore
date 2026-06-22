@@ -1,5 +1,5 @@
 # Build artifacts
-build/
+build*/
 
 # Local backups from the macOS -> headless Linux port
 *.orig
