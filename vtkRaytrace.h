@@ -48,7 +48,7 @@ void getRay(double p1[3], double p2[3],double * ray);
 
 void writeBMP();
 
-void readMesh(char *inputFilename, int nContours);
+void readMesh(char *inputFilename, int nContours, bool sharp, double isoValue);
 
 
 void printProgress (double percentage);

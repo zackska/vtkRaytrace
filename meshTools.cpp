@@ -177,7 +177,8 @@ void meshTools::displayAll(vtkPolyData *mesh, double chip_size, double imageLoc,
 	newMesh->Delete();
 }
 
-void meshTools::gridScalarContours(vtkStructuredGrid *grid, vtkPolyData *mesh, int nContours)
+void meshTools::gridScalarContours(vtkStructuredGrid *grid, vtkPolyData *mesh, int nContours,
+                                   bool sharp, double sharpIndex, double isoValue)
 {
 	// Assign refractive-index field as scalar to contour with. NOTE: read "rho_s" from the
 	// input GRID (was mesh, the empty output polydata -> null). rho_s must hold n = 1+K_GD*rho.
@@ -208,52 +209,86 @@ void meshTools::gridScalarContours(vtkStructuredGrid *grid, vtkPolyData *mesh, i
 		vtkMarchingContourFilter *filter = vtkMarchingContourFilter::New();
 		filter->UseScalarTreeOn();
 		filter->SetInputData(grid);
-		filter->GenerateValues(nContours, range);
-		double *contourValues = filter->GetValues();
-		filter->SetNumberOfContours(1); 
 
-		// Create the color map
-		vtkScalarsToColors *colorLookupTable = vtkScalarsToColors::New();
-		colorLookupTable->SetRange(range);
-		colorLookupTable->Build();
- 
-		//isolate density contours one by one and assign refractive index ratio to them
-		for(int k = 1; k<nContours-1;k++)
+		if(sharp)
 		{
-			filter->SetValue(0, contourValues[k]);
+			// SHARP two-phase interface: a physically resolved liquid/gas boundary is a
+			// SINGLE refracting surface, not a graded-index stack. Extract one contour at the
+			// interface iso-level (isoValue, or auto = midpoint of the range -> alpha=0.5 for a
+			// [1, 1+dn] field) and assign it the full liquid index (sharpIndex = glassIndex),
+			// exactly like the STL uniform-index solid path. No color/shell machinery.
+			double iso = (isoValue > 0.0) ? isoValue : 0.5*(range[0]+range[1]);
+			filter->SetNumberOfContours(1);
+			filter->SetValue(0, iso);
 			filter->Update();
 
 			vtkPolyData *tempMesh = vtkPolyData::New();
 			tempMesh->DeepCopy(filter->GetOutput());
 
-			// PER-SHELL arrays (were allocated once outside the loop and resized each
-			// iteration -> every shell ended up sharing the LAST shell's array, corrupting
-			// the index ratios and overrunning on append). Allocate fresh each shell.
 			vtkDoubleArray* index = vtkDoubleArray::New();
 			index->SetNumberOfComponents(1); index->SetName("index ratio");
 			index->SetNumberOfTuples(tempMesh->GetNumberOfCells());
-			index->FillComponent(0, contourValues[k]/contourValues[k+1]);
+			index->FillComponent(0, sharpIndex);
 			tempMesh->GetCellData()->AddArray(index);
-			index->Delete();   // tempMesh keeps a reference
+			index->Delete();
 
-			// add colors for plotting (dcolor was `new double` (1 elem) used as a 3-vector)
-			vtkIntArray *colors = vtkIntArray::New();
-			colors->SetNumberOfComponents(3); colors->SetName("Colors");
-			double dcolor[3] = {0,0,0};
-			colorLookupTable->GetColor(contourValues[k], dcolor);
-			colors->SetNumberOfTuples(tempMesh->GetNumberOfPoints());
-			for(int l=0;l<3;l++)
-			{
-				colors->FillComponent(l, int(dcolor[l]*255));
-			}
-
-			tempMesh->GetCellData()->SetScalars(colors);
-			colors->Delete();   // tempMesh keeps a reference
-			// add to appendPolyData filter
 			append->AddInputData(tempMesh);
 			tempMesh->Delete();
+			printf("SHARP interface: 1 contour at rho_s=%.5f (range %.4f..%.4f), index=%.4f\n",
+			       iso, range[0], range[1], sharpIndex);
 		}
-	
+		else
+		{
+			// DIFFUSE (original): nested iso-index shells across the whole field range.
+			filter->GenerateValues(nContours, range);
+			double *contourValues = filter->GetValues();
+			filter->SetNumberOfContours(1);
+
+			// Create the color map
+			vtkScalarsToColors *colorLookupTable = vtkScalarsToColors::New();
+			colorLookupTable->SetRange(range);
+			colorLookupTable->Build();
+
+			printf("DIFFUSE field: %d iso-index shells over rho_s %.4f..%.4f\n", nContours, range[0], range[1]);
+			//isolate density contours one by one and assign refractive index ratio to them
+			for(int k = 1; k<nContours-1;k++)
+			{
+				filter->SetValue(0, contourValues[k]);
+				filter->Update();
+
+				vtkPolyData *tempMesh = vtkPolyData::New();
+				tempMesh->DeepCopy(filter->GetOutput());
+
+				// PER-SHELL arrays (were allocated once outside the loop and resized each
+				// iteration -> every shell ended up sharing the LAST shell's array, corrupting
+				// the index ratios and overrunning on append). Allocate fresh each shell.
+				vtkDoubleArray* index = vtkDoubleArray::New();
+				index->SetNumberOfComponents(1); index->SetName("index ratio");
+				index->SetNumberOfTuples(tempMesh->GetNumberOfCells());
+				index->FillComponent(0, contourValues[k]/contourValues[k+1]);
+				tempMesh->GetCellData()->AddArray(index);
+				index->Delete();   // tempMesh keeps a reference
+
+				// add colors for plotting (dcolor was `new double` (1 elem) used as a 3-vector)
+				vtkIntArray *colors = vtkIntArray::New();
+				colors->SetNumberOfComponents(3); colors->SetName("Colors");
+				double dcolor[3] = {0,0,0};
+				colorLookupTable->GetColor(contourValues[k], dcolor);
+				colors->SetNumberOfTuples(tempMesh->GetNumberOfPoints());
+				for(int l=0;l<3;l++)
+				{
+					colors->FillComponent(l, int(dcolor[l]*255));
+				}
+
+				tempMesh->GetCellData()->SetScalars(colors);
+				colors->Delete();   // tempMesh keeps a reference
+				// add to appendPolyData filter
+				append->AddInputData(tempMesh);
+				tempMesh->Delete();
+			}
+			colorLookupTable->Delete();
+		}
+
 		append->Update();
 		// extract all contours with associated density ratios
 		mesh->DeepCopy(append->GetOutput());

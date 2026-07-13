@@ -46,7 +46,8 @@ static void printVec(int* vec, const char *name, int length);
 
 static void extractMultiblockSubset(char *inputFilename, double distance, vtkStructuredGrid *grid, char *outputFilename);
 
-static void gridScalarContours(vtkStructuredGrid *grid, vtkPolyData *mesh, int nContours);
+static void gridScalarContours(vtkStructuredGrid *grid, vtkPolyData *mesh, int nContours,
+                               bool sharp, double sharpIndex, double isoValue);
 
 static void show(vtkSmartPointer<vtkRenderer> renderer,  vtkPolyData * mesh);
 

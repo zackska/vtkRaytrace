@@ -16,7 +16,19 @@ int main (int argc, char **argv)
 	vtkRaytrace r;                       // central object
     vtkRaytrace *rayTrace = &r;
 
-	int nContours = 10;
+	// Interface model:
+	//   VTKRT_INTERFACE=sharp   -> one refracting surface at the alpha=0.5 iso-level (resolved
+	//                              two-phase liquid/gas interface). Physically correct for VoF.
+	//   VTKRT_INTERFACE=diffuse -> (default) original nested iso-index shells, for a continuous
+	//                              index field (e.g. compressible gas density shadowgraphy).
+	//   VTKRT_NCONTOURS=<n>     -> shell count in the DIFFUSE case (default 10).
+	//   VTKRT_ISOVALUE=<v>      -> SHARP iso-level in rho_s units (default: midpoint of the field
+	//                              range, i.e. alpha=0.5 for an [n_gas, n_liquid] field).
+	int nContours = (getenv("VTKRT_NCONTOURS")) ? atoi(getenv("VTKRT_NCONTOURS")) : 10;
+	const char *ifaceEnv = getenv("VTKRT_INTERFACE");
+	bool sharp = (ifaceEnv && strcmp(ifaceEnv, "sharp") == 0);
+	double isoValue = (getenv("VTKRT_ISOVALUE")) ? atof(getenv("VTKRT_ISOVALUE")) : -1.0;
+	if(nContours < 3) nContours = 3;   // diffuse loop runs k=1..nContours-2; needs >=3
 
 	// Read in mesh file and convert to density iso-contours, then calculate normals and OBBTree
 	rayTrace->mesh = vtkPolyData::New();
@@ -45,7 +57,7 @@ int main (int argc, char **argv)
 	// absorption -> graded transmission through the liquid.
 	rayTrace->glassIndex = (getenv("VTKRT_GLASSINDEX")) ? atof(getenv("VTKRT_GLASSINDEX")) : 1.33;
 
-	rayTrace->readMesh(inputFilename, nContours);
+	rayTrace->readMesh(inputFilename, nContours, sharp, isoValue);
 	cout << "Loaded mesh: " << rayTrace->mesh->GetNumberOfCells() << " cells" << endl;
 	// NOTE: meshTools::show() opens a blocking render window — disabled for headless batch.
 	//meshTools::show(rayTrace->mesh);

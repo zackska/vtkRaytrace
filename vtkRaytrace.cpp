@@ -14,7 +14,7 @@
 using namespace std;
 
 //Mesh input file reader
-void vtkRaytrace::readMesh(char *inputFilename, int nContours)
+void vtkRaytrace::readMesh(char *inputFilename, int nContours, bool sharp, double isoValue)
 {
 
 
@@ -60,8 +60,10 @@ void vtkRaytrace::readMesh(char *inputFilename, int nContours)
 			meshTools::printVec(bounds, "Bounds", 6);
 		}
 
-		// convert the structured grid data into polydata surface contours with refractive index ratios assigned
-		meshTools::gridScalarContours(grid, mesh, nContours);
+		// convert the structured grid data into polydata surface contours with refractive index ratios assigned.
+		// sharp -> single physical interface (alpha=0.5) at the full liquid index (glassIndex);
+		// diffuse -> original nested iso-index shells (for continuous fields, e.g. gas density).
+		meshTools::gridScalarContours(grid, mesh, nContours, sharp, glassIndex, isoValue);
 	}
 
 	//Populate mesh normals for access in loop
