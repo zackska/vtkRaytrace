@@ -4,8 +4,16 @@
 //  eikonal : continuous RK4 (Sharma) through n=1+K*field0.
 //  hybrid  : gas eikonal bend (field1) + Snell interface (field0=alpha) + absorption (evap).
 // Finite DoF: aperture sampling (naper rays/pixel converging at focal plane zf, radius apR).
+// outmode: 0 shadowgraph | 1 mean eps_x [mrad] | 2 mean eps_y [mrad]
+//          3 CLASSICAL SCHLIEREN (knife edge at the focal plane, finite source image)
+//          4 BOS |displacement| [mm] | 5 BOS dx [mm] | 6 BOS dy [mm]
+//   Classical schlieren: a source image of height a is cut by a knife so a fraction `cutoff`
+//   passes undeflected; a ray deflected by eps is displaced f2*eps at the knife, so
+//   T = clamp(cutoff + (f2/a)*eps, 0, 1)  -- the standard Settles contrast dI/I0 = f2*eps/a.
+//   BOS: a background pattern a distance Lbg behind the test section appears displaced by
+//   Lbg*tan(eps); cross-correlating that displacement field is what a BOS rig measures.
 // grid.bin: int32 NX,NY,NZ ; float X0,X1,Y0,Y1,Z0,Z1 ; NX*NY*NZ float32 (k,j,i).
-// Args: grid0 img mode RESX ACCdeg DN K absorb nLiq [outmode naper apR zf grid1 K1]
+// Args: grid0 img mode RESX ACCdeg DN K absorb nLiq [outmode naper apR zf grid1 K1 srcAng knife cutoff sgain Lbg]
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -13,8 +21,8 @@
 #include <cuda_runtime.h>
 
 struct Params {
-  int NX,NY,NZ, RESX,RESY, mode, nstep, outmode, naper;
-  float X0,X1,Y0,Y1,Z0,Z1, ACCcos, DN, K, absorb, nLiq, ds, apR, zf, K1;
+  int NX,NY,NZ, RESX,RESY, mode, nstep, outmode, naper, knife;
+  float X0,X1,Y0,Y1,Z0,Z1, ACCcos, DN, K, absorb, nLiq, ds, apR, zf, K1, srcAng, cutoff, sgain, Lbg;
 };
 __device__ __forceinline__ float3 mk(float a,float b,float c){ float3 r; r.x=a;r.y=b;r.z=c; return r; }
 __device__ __forceinline__ float3 operator+(float3 a,float3 b){ return mk(a.x+b.x,a.y+b.y,a.z+b.z); }
@@ -39,6 +47,13 @@ __device__ __forceinline__ float3 refract(float3 d,float3 n,float eta){
   return norm3(d*eta + n*(eta*ci - sqrtf(k)));
 }
 struct RayOut{ float3 dir; float absorb; };
+// BOS validity: the ray must still be travelling forward (it has not been turned back or
+// sideways by TIR at the interface) AND the background must still be visible through it.
+// Rays failing either carry no background signal -- in a real rig the cross-correlation
+// simply fails there -- so they are excluded rather than allowed to blow up tan(eps).
+__device__ __forceinline__ bool bosValid(float3 d,float att,float minCos,float minT){
+  return (d.z>minCos)&&(att>minT)&&isfinite(d.x)&&isfinite(d.y)&&isfinite(d.z);
+}
 __device__ RayOut marchRay(cudaTextureObject_t t0,cudaTextureObject_t t1,const Params&P,float3 pos,float3 dir){
   float absorb=0.f;
   if(P.mode==1){ // eikonal Sharma RK4
@@ -68,20 +83,41 @@ __global__ void traceKernel(cudaTextureObject_t t0,cudaTextureObject_t t1,Params
   int ix=blockIdx.x*blockDim.x+threadIdx.x, iy=blockIdx.y*blockDim.y+threadIdx.y;
   if(ix>=P.RESX||iy>=P.RESY) return;
   float x=P.X0+(ix+0.5f)/P.RESX*(P.X1-P.X0), y=P.Y0+(iy+0.5f)/P.RESY*(P.Y1-P.Y0);
-  float sumT=0.f, dfx=0.f, dfy=0.f;
+  float sumT=0.f, dfx=0.f, dfy=0.f, schl=0.f, bosx=0.f, bosy=0.f; int nbos=0;
   for(int ai=0;ai<P.naper;ai++){
-    float3 start,dir;
-    if(P.naper<=1||P.apR<=0.f){ start=mk(x,y,P.Z0); dir=mk(0,0,1); }
+    float3 start,dir,entry;
+    if(P.srcAng>0.f){                        // diffuse extended source: sample incident ray over the source cone
+      float sa=ai*2.399963f, sr=P.srcAng*sqrtf((ai+0.5f)/P.naper);
+      start=mk(x,y,P.Z0); dir=norm3(mk(tanf(sr)*cosf(sa),tanf(sr)*sinf(sa),1.f)); entry=mk(0,0,1); }
+    else if(P.naper<=1||P.apR<=0.f){ start=mk(x,y,P.Z0); dir=mk(0,0,1); entry=dir; }
     else{ float ang=ai*2.399963f, rr=P.apR*sqrtf((ai+0.5f)/P.naper);   // thin-lens aperture disk
-          start=mk(x+rr*cosf(ang),y+rr*sinf(ang),P.Z0); dir=norm3(mk(x,y,P.zf)-start); }
-    float3 entry=norm3(dir);                 // collection is relative to the (possibly tilted) chief ray
+          start=mk(x+rr*cosf(ang),y+rr*sinf(ang),P.Z0); dir=norm3(mk(x,y,P.zf)-start); entry=norm3(dir); }
     RayOut o=marchRay(t0,t1,P,start,dir);
     float cosang=dot3(norm3(o.dir),entry);   // net deviation from the undeviated aperture path
-    sumT+=(cosang>=P.ACCcos)? expf(-o.absorb):0.f;
+    float att=expf(-o.absorb);
+    sumT+=(cosang>=P.ACCcos)? att:0.f;
     dfx+=atan2f(o.dir.x,o.dir.z); dfy+=atan2f(o.dir.y,o.dir.z);
+    // deflection RELATIVE to this ray's own incident direction (correct for aperture /
+    // diffuse sources, where the undeviated ray is not along +z)
+    float ex=atan2f(o.dir.x,o.dir.z)-atan2f(entry.x,entry.z);
+    float ey=atan2f(o.dir.y,o.dir.z)-atan2f(entry.y,entry.z);
+    float eps=(P.knife==1)? ex : ey;                       // knife==1 cuts x-deflection
+    float T=P.cutoff+P.sgain*eps; T=fminf(fmaxf(T,0.f),1.f);
+    schl+=T*att;
+    // exclude rays that cannot reach the background (TIR / opaque liquid): cos(85deg)=0.0872
+    if(bosValid(o.dir,att,0.0872f,0.02f)){ bosx+=P.Lbg*tanf(ex); bosy+=P.Lbg*tanf(ey); nbos++; }
   }
   float inv=1.f/P.naper, out;
-  if(P.outmode==1) out=dfx*inv*1000.f; else if(P.outmode==2) out=dfy*inv*1000.f; else out=sumT*inv;
+  switch(P.outmode){
+    case 1: out=dfx*inv*1000.f; break;                       // mean eps_x [mrad]
+    case 2: out=dfy*inv*1000.f; break;                       // mean eps_y [mrad]
+    case 3: out=schl*inv; break;                             // classical schlieren intensity
+    // BOS modes report NaN where no ray reached the background (masked in a real rig)
+    case 4: out=nbos? sqrtf(bosx*bosx+bosy*bosy)/nbos*1000.f : nanf(""); break;
+    case 5: out=nbos? bosx/nbos*1000.f : nanf(""); break;
+    case 6: out=nbos? bosy/nbos*1000.f : nanf(""); break;
+    default: out=sumT*inv;                                   // shadowgraph
+  }
   img[iy*P.RESX+ix]=out;
 }
 static cudaTextureObject_t upload(const char* path,int&NX,int&NY,int&NZ,float bnd[6]){
@@ -97,7 +133,7 @@ static cudaTextureObject_t upload(const char* path,int&NX,int&NY,int&NZ,float bn
   cudaTextureObject_t tex; cudaCreateTextureObject(&tex,&rd,&td,0); return tex;
 }
 int main(int argc,char**argv){
-  if(argc<10){ printf("usage: grid0 img mode RESX ACCdeg DN K absorb nLiq [outmode naper apR zf grid1 K1]\n"); return 1; }
+  if(argc<10){ printf("usage: grid0 img mode RESX ACCdeg DN K absorb nLiq [outmode naper apR zf grid1 K1 srcAng knife cutoff sgain Lbg]\n  outmode: 0 shadowgraph, 1 eps_x mrad, 2 eps_y mrad, 3 schlieren, 4 BOS|d| mm, 5 BOS dx, 6 BOS dy\n"); return 1; }
   Params P; float bnd[6]; int NX,NY,NZ;
   cudaTextureObject_t t0=upload(argv[1],NX,NY,NZ,bnd);
   P.mode = strcmp(argv[3],"sharp")==0?0 : strcmp(argv[3],"eikonal")==0?1 : 2;
@@ -106,6 +142,11 @@ int main(int argc,char**argv){
   P.outmode=argc>10?atoi(argv[10]):0; P.naper=argc>11?atoi(argv[11]):1;
   P.apR=argc>12?atof(argv[12]):0.f; P.zf=argc>13?atof(argv[13]):0.5f*(bnd[4]+bnd[5]);
   P.K1=argc>15?atof(argv[15]):0.f;
+  P.srcAng=argc>16?atof(argv[16])*3.14159265f/180.f:0.f;   // diffuse-source half-angle (deg)
+  P.knife =argc>17?atoi(argv[17]):2;      // 1 = knife cuts eps_x (vertical edge), 2 = cuts eps_y
+  P.cutoff=argc>18?atof(argv[18]):0.5f;   // fraction of the source image passed at zero deflection
+  P.sgain =argc>19?atof(argv[19]):1000.f; // f2/a  [1/rad]  schlieren sensitivity
+  P.Lbg   =argc>20?atof(argv[20]):0.f;    // BOS background distance behind the test section
   cudaTextureObject_t t1=t0;
   if(P.mode==2 && argc>14){ int a,b,c; float bb[6]; t1=upload(argv[14],a,b,c,bb); }
   P.NX=NX;P.NY=NY;P.NZ=NZ; P.X0=bnd[0];P.X1=bnd[1];P.Y0=bnd[2];P.Y1=bnd[3];P.Z0=bnd[4];P.Z1=bnd[5];

@@ -28,6 +28,17 @@ cmake --build .
 
 The STL path is currently hard-coded in `main.cpp` (look for `inputFilename`) — edit it before running.
 
+## GPU renderer
+
+`gpu/` contains **gpuShadow**, a CUDA reimplementation that supersedes the VTK tracer for
+volumetric fields: one thread per pixel, rays marched through a 3D texture with hardware
+trilinear sampling, ~300 Mrays/s (a frame in 3-5 ms against ~15-30 s here). It adds
+**classical schlieren** and **background-oriented schlieren (BOS)** alongside shadowgraphy,
+and ships analytic validation for each. See `gpu/README.md`.
+
+The two are complementary rather than redundant: this VTK tracer works from a triangulated
+surface (STL), gpuShadow from a sampled volume.
+
 ## License
 
-No license file present. Treat as "all rights reserved" until clarified.
+MIT - see `LICENSE`.
