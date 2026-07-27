@@ -6,3 +6,5 @@ build*/
 
 # Vendored/downloaded build-env deps (utf8cpp); not referenced by CMakeLists
 deps/
+__pycache__/
+*.pyc

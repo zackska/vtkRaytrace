@@ -111,3 +111,34 @@ index ramp, where ε = (dn/dx)·L exactly: deflection and BOS displacement both 
 transmission matching `clamp(cutoff + (f2/a)·ε, 0, 1)` across sensitivities from 0 to
 20000 /rad — linear then correctly saturating. The correlation emulator is checked by
 recovering known uniform shifts: 0–8 px to better than 0.15 px.
+
+### Target and camera model
+
+`bos_correlate.py` generates an idealised Gaussian speckle background. Two further scripts
+model what a real rig records, so you can ask how the optics and the target — rather than the
+flow — limit the measurement.
+
+`bos_realistic_target.py` builds a **printed** target (hard-edged dots, not Gaussian) and
+puts both exposures through a camera: optical PSF, shot noise, read noise and quantisation,
+with **independent** noise on each frame. A real rig cannot reuse one exposure, and that
+matters: measured on a helium-jet field, Gaussian speckle falls to ~81 % valid vectors at
+0.32 px RMS under a realistic camera, while a printed target holds ~99 % at 0.27 px — hard
+ink edges carry more high-frequency content, so the correlation peak stands clear of the
+noise floor. Defocus dominates everything else; light level and bit depth barely register.
+
+`bos_window_sweep.py` sweeps interrogation window size against dot density. The usual
+"32 px window" advice is only half the story: at 7.6 dots/window the same 32 px window gave
+3.7 px RMS with a +0.9 px bias, and at 38 dots/window it gave 0.115 px. Across 8–64 px
+windows the **density mattered more than the window size**, so if you need finer windows the
+fix is more dots, not smaller boxes.
+
+Both take a deflection field as an `.npz` containing `dx`, `dy` (apparent background
+displacement, mm) and `mm_per_px` — i.e. what `gpuShadow` outmodes 5/6 produce:
+
+```bash
+python3 gpu/bos_realistic_target.py field.npz
+python3 gpu/bos_window_sweep.py     field.npz
+```
+
+Numbers quoted above came from a single jet at one instant; treat them as illustrative of the
+trends rather than as calibration constants.
