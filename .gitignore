@@ -8,3 +8,6 @@ build*/
 deps/
 __pycache__/
 *.pyc
+
+# Stray MinGW preprocessor output accidentally generated from .vscode/*.json
+.vscode/*.exe

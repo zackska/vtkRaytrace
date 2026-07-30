@@ -4,29 +4,65 @@ A C++ ray tracer for simulating diffuse back-lit illumination through transmissi
 
 The tracer reads a triangulated surface mesh (STL), converts it to a set of density iso-contours, builds an OBB tree for fast intersection, and shoots rays through the geometry to produce a synthetic shadowgram / transmission image.
 
+**See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for how the pieces fit together** — the
+two tracers, the physics chain from field to detector, the data contracts, and where fidelity
+is won and lost.
+
 ## Files
+
+### CPU tracer (`ReadSTL`)
 
 | File | Purpose |
 |---|---|
-| `main.cpp` | Entry point — loads an STL, configures the tracer, runs it |
+| `main.cpp` | Entry point — loads the input, configures the tracer, runs it |
 | `vtkRaytrace.cpp/.h` | Core class: mesh setup, ray casting, intersection logic |
 | `meshTools.cpp/.h` | VTK helpers for mesh manipulation and visualisation |
 | `geometry.h` | Vector / geometric primitive utilities |
 | `dirent.h` | POSIX `dirent` polyfill for Windows builds |
 | `CMakeLists.txt` | CMake build script (produces `ReadSTL` executable) |
 
+### GPU renderer (`gpu/`)
+
+| File | Purpose |
+|---|---|
+| `gpu/gpuShadow.cu` | CUDA kernel — one thread per pixel, `sharp`/`eikonal`/`hybrid` ray march, 7 output modes |
+| `gpu/foam_shadowgraph.py` | OpenFOAM case → `grid.bin` (`scatter`/`resample`, `presmooth`) |
+| `gpu/bos_correlate.py` | Speckle warp + windowed FFT cross-correlation with loss-of-pairs correction |
+| `gpu/bos_realistic_target.py` | Printed target + camera model (PSF, shot/read noise, quantisation) |
+| `gpu/bos_window_sweep.py` | Interrogation window size × dot density sweep |
+| `gpu/gpu_validate.py` | Eikonal/hybrid validation against closed-form cases |
+| `gpu/validate_schlieren_bos.py` | Schlieren + BOS validation on an analytic index ramp |
+| `gpu/README.md` | Modes, arguments, output modes, and the measurable-envelope caveats |
+
 ## Build
 
-Requires CMake ≥ 3.0 and a VTK installation (tested with VTK 7–8).
+Requires CMake ≥ 3.12 and **VTK 9**. `CMakeLists.txt` requests only the modules actually used
+rather than calling a bare `find_package(VTK)` — a bare call pulls in every module present,
+which breaks when building against ParaView's bundled VTK. Classes are factory-registered via
+`vtk_module_autoinit`, which VTK ≥ 9 requires for the IO and Rendering factories to
+initialise. OpenMP is used if found.
 
 ```bash
 mkdir build && cd build
 cmake ..
 cmake --build .
-./ReadSTL
+./ReadSTL [input.stl] [nPixels] [absorptionCoeff]
 ```
 
-The STL path is currently hard-coded in `main.cpp` (look for `inputFilename`) — edit it before running.
+Arguments are optional and positional: input path, square image resolution (default 400), and
+absorption coefficient in 1/length (default 80). With no arguments a hard-coded path in
+`main.cpp` is used — edit `inputFilename` or pass `argv[1]`.
+
+Behaviour is further set by environment variable:
+
+| Variable | Effect |
+|---|---|
+| `VTKRT_VOLUME=1` | read a single ASCII `.vts` structured grid (cell array `rho_s`) instead of an STL surface |
+| `VTKRT_INTERFACE` | `sharp` = one refracting surface at the α=0.5 iso-level; `diffuse` (default) = nested iso-index shells |
+| `VTKRT_NCONTOURS` | shell count in the `diffuse` case (default 10) |
+| `VTKRT_ISOVALUE` | iso-level in `rho_s` units for the `sharp` case (default: field midpoint) |
+| `VTKRT_OUT` | output filename, so concurrent processes don't collide |
+| `VTKRT_FRAME_BOUNDS` | `"xmin xmax ymin ymax zmin zmax"` — fixes the bounding box so an image *sequence* shares one framing |
 
 ## GPU renderer
 
