@@ -7,11 +7,13 @@ written for. Read the header before reusing.
 | Script | What it does | Study-specific assumptions |
 |---|---|---|
 | `ladder_strip.py` | Renders a 5-panel shadowgraph comparison strip across a Weber-number ladder, cropped to a *common* box so panels are like-for-like | `CASES` is hard-coded to `We{16,18,20,22,25}_S0_L2`; expects each case staged as a directory containing `system/blockMeshDict`, `case.foam` and reconstructed time dirs holding `alpha.water` |
+| `density_plane.py` | Centre-plane density and species fraction from a **decomposed** OpenFOAM case — reads `processor*/` directly via `vtkPOpenFOAMReader` CaseType 0, so no `reconstructPar` and no serial `polyMesh` needed (worth ~40% of the download when fetching one time directory from object storage) |
 | `sigma_gap.py` | Instantaneous singular-value diagnostics on a shadowgraph image set — the relative gap δ = (σ₁−σ₂)/σ₁, the rank for 99% spectral energy, and normalised spectral entropy | Expects the `frames_real.npz` layout (`X`, `meta`, `H`, `W`) built from the Liang (2022) coaxial-swirl dataset; the `AIR2WE` map is calibrated for **S=0 only** |
 
 ```bash
 python3 analysis/ladder_strip.py  /path/to/staged/cases     # writes ladder_strip.png there
 python3 analysis/sigma_gap.py     /path/to/frames_real.npz  # writes *_sigma_gap.npy alongside
+python3 analysis/density_plane.py /path/to/case 0.15        # writes density_plane.png/.npz there
 ```
 
 Both resolve the `gpuShadow` binary from `$GPUSHADOW_DIR`, falling back to `../gpu`.

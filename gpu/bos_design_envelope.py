@@ -32,7 +32,12 @@ Spatial panels use aspect='equal' so 1 mm in x is 1 mm in y -- the field is 160x
 they render 2.5:1. Squaring the axes would misrepresent the geometry.
 
 USAGE
-    python3 gpu/bos_design_envelope.py field.npz [L_bg_of_field_mm]
+    python3 gpu/bos_design_envelope.py field.npz [L_bg_of_field_mm] [rho_plane.npz]
+
+Passing a third argument -- an npz holding `rho` and `extent_mm` for the centre plane --
+mounts the density field as the first panel, so the figure reads as one chain: the field that
+bends the light, what the background actually moves by, where that is measurable, and the
+standoff that follows.
 
 `field.npz` holds `dx`, `dy` (apparent background displacement, mm) and `mm_per_px` -- i.e.
 what gpuShadow outmodes 5/6 produce. The second argument is the standoff the field was
@@ -53,6 +58,7 @@ SHOW_LBG = [20, 100, 300, 1000]
 
 field = sys.argv[1] if len(sys.argv) > 1 else 'field.npz'
 lbg_ref = float(sys.argv[2]) if len(sys.argv) > 2 else 300.0
+rho_plane = sys.argv[3] if len(sys.argv) > 3 else None
 
 z = np.load(field)
 mm_per_px = float(z['mm_per_px'])
@@ -94,22 +100,45 @@ print(f"    past win/4 ceiling {100*fr[2]:5.1f} %")
 
 extent = [0, d_mm.shape[1] * mm_per_px, 0, d_mm.shape[0] * mm_per_px]
 
-fig = plt.figure(figsize=(12.4, 13.4), dpi=150)
-gs = fig.add_gridspec(3, 2, height_ratios=[1.0, 1.0, 1.45], hspace=0.26, wspace=0.22)
-axT = fig.add_subplot(gs[0, :])
-axM = fig.add_subplot(gs[1, :])
-axA = fig.add_subplot(gs[2, 0])
-axB = fig.add_subplot(gs[2, 1])
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+if rho_plane:
+    RP = np.load(rho_plane)
+    fig = plt.figure(figsize=(12.4, 17.6), dpi=150)
+    gs = fig.add_gridspec(4, 2, height_ratios=[1.0, 1.0, 1.0, 1.45],
+                          hspace=0.30, wspace=0.22)
+    axR = fig.add_subplot(gs[0, :])
+    axT = fig.add_subplot(gs[1, :])
+    axM = fig.add_subplot(gs[2, :])
+    axA = fig.add_subplot(gs[3, 0])
+    axB = fig.add_subplot(gs[3, 1])
+    rho = RP['rho']
+    rext = list(RP['extent_mm'])
+    imR = axR.imshow(rho, origin='lower', extent=rext, aspect='equal', cmap='viridis',
+                     vmin=float(np.nanpercentile(rho, 0.2)),
+                     vmax=float(np.nanpercentile(rho, 99.8)), interpolation='nearest')
+    axR.set_title('A · centre-plane density — the field that bends the light', fontsize=10.5)
+    axR.set_xlabel('x (mm)'); axR.set_ylabel('y (mm)')
+    capR = make_axes_locatable(axR).append_axes('right', size='1.8%', pad=0.10)
+    cbR = fig.colorbar(imR, cax=capR)
+    cbR.set_label(r'$\rho$  [kg/m$^3$]', fontsize=9); cbR.ax.tick_params(labelsize=8)
+    LBL = 'BCDE'
+else:
+    fig = plt.figure(figsize=(12.4, 13.4), dpi=150)
+    gs = fig.add_gridspec(3, 2, height_ratios=[1.0, 1.0, 1.45], hspace=0.26, wspace=0.22)
+    axT = fig.add_subplot(gs[0, :])
+    axM = fig.add_subplot(gs[1, :])
+    axA = fig.add_subplot(gs[2, 0])
+    axB = fig.add_subplot(gs[2, 1])
+    LBL = 'ABCD'
 
 # ---------------- Panel A: ground-truth displacement field ----------------
 imT = axT.imshow(d_mm, origin='lower', extent=extent, aspect='equal',
                  cmap='magma', vmin=0, vmax=float(np.percentile(d_mm, 99.5)))
-axT.set_title(f'A · ground-truth displacement |d| at $L_{{bg}}$ = {lbg_ref:.0f} mm — '
+axT.set_title(f'{LBL[0]} · ground-truth displacement |d| at $L_{{bg}}$ = {lbg_ref:.0f} mm — '
               f'what no experiment can read directly', fontsize=10.5)
 axT.set_xlabel('x (mm)'); axT.set_ylabel('y (mm)')
-# reserve identical colourbar width on BOTH spatial axes so A and B render the same size
-# and can be compared pixel-for-pixel; B's slot is created then hidden.
-from mpl_toolkits.axes_grid1 import make_axes_locatable
+# identical colourbar-width slots on every spatial axis so they render the same size and
+# can be compared pixel-for-pixel; the mask's slot is created then hidden.
 capT = make_axes_locatable(axT).append_axes('right', size='1.8%', pad=0.10)
 cbT = fig.colorbar(imT, cax=capT)
 cbT.set_label('|d|  [mm]', fontsize=9); cbT.ax.tick_params(labelsize=8)
@@ -119,7 +148,7 @@ from matplotlib.colors import ListedColormap
 cmap = ListedColormap(['#cfd8e0', '#1b7f5f', '#a9432c'])
 axM.imshow(cat, origin='lower', extent=extent, aspect='equal', cmap=cmap, vmin=-0.5, vmax=2.5,
            interpolation='nearest')
-axM.set_title(f'B · where the measurement fails at $L_{{bg}}$ = {MASK_LBG:.0f} mm, '
+axM.set_title(f'{LBL[1]} · where the measurement fails at $L_{{bg}}$ = {MASK_LBG:.0f} mm, '
               f'{MASK_WIN} px window', fontsize=10.5)
 axM.set_xlabel('x (mm)'); axM.set_ylabel('y (mm)')
 capM = make_axes_locatable(axM).append_axes('right', size='1.8%', pad=0.10)
@@ -138,7 +167,7 @@ axA.hist(eps, bins=np.logspace(np.log10(max(eps[0], 1e-4)), np.log10(eps[-1]), 9
 axA.set_xscale('log')
 axA.set_xlabel('deflection |ε|  [mrad]')
 axA.set_ylabel('pixels')
-axA.set_title('C · the flow spans more range than one standoff covers', fontsize=10.5)
+axA.set_title(f'{LBL[2]} · the flow spans more range than one standoff covers', fontsize=10.5)
 ymax = axA.get_ylim()[1]
 cols = ['#1b7f5f', '#b9741a', '#7a4fa3', '#a9432c']
 WIN_A = 32
@@ -168,7 +197,7 @@ axB.set_xscale('log')
 axB.set_xlabel('background standoff  $L_{bg}$  [mm]')
 axB.set_ylabel('measurable fraction of field  [%]')
 axB.set_ylim(0, 100)
-axB.set_title('D · the design curve — choose $L_{bg}$ before building', fontsize=10.5)
+axB.set_title(f'{LBL[3]} · the design curve — choose $L_{{bg}}$ before building', fontsize=10.5)
 axB.grid(alpha=0.18, lw=0.6)
 axB.legend(fontsize=8, frameon=False, loc='lower center', ncol=2)
 wbest = max(WINS, key=lambda w: best[w][1])
