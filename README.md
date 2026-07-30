@@ -30,9 +30,22 @@ is won and lost.
 | `gpu/bos_correlate.py` | Speckle warp + windowed FFT cross-correlation with loss-of-pairs correction |
 | `gpu/bos_realistic_target.py` | Printed target + camera model (PSF, shot/read noise, quantisation) |
 | `gpu/bos_window_sweep.py` | Interrogation window size × dot density sweep |
+| `gpu/optics_sweep.py` | Finite-aperture / defocus sweep (f/32 → f/2.8), blur traced not post-applied |
+| `gpu/bos_velocimetry.py` | Whether BOS yields velocity — correlates deflection fields between instants |
+| `gpu/correction_transfer.py` | Experiment-only vs CFD-informed bias correction, scored on held-out frames |
 | `gpu/gpu_validate.py` | Eikonal/hybrid validation against closed-form cases |
 | `gpu/validate_schlieren_bos.py` | Schlieren + BOS validation on an analytic index ramp |
 | `gpu/README.md` | Modes, arguments, output modes, and the measurable-envelope caveats |
+
+### Study harnesses (`analysis/`)
+
+Not library code — each carries assumptions from the study it was written for. See
+[`analysis/README.md`](analysis/README.md).
+
+| File | Purpose |
+|---|---|
+| `analysis/ladder_strip.py` | 5-panel common-crop shadowgraph strip across a Weber-number ladder |
+| `analysis/sigma_gap.py` | Instantaneous singular-value diagnostics (δ, r99, spectral entropy) on shadowgraph sets |
 
 ## Build
 

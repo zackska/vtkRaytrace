@@ -142,3 +142,48 @@ python3 gpu/bos_window_sweep.py     field.npz
 
 Numbers quoted above came from a single jet at one instant; treat them as illustrative of the
 trends rather than as calibration constants.
+
+### Optics sweep, velocimetry, and correction transfer
+
+Three further scripts push on what BOS can and cannot deliver. All take an OpenFOAM case
+directory as `argv[1]` (default: cwd) and write their `.npz` results back into it; the
+`gpuShadow` binary is found via `$GPUSHADOW_DIR`, defaulting to this directory.
+
+```bash
+python3 gpu/optics_sweep.py         /path/to/case
+python3 gpu/bos_velocimetry.py      /path/to/case
+python3 gpu/correction_transfer.py  /path/to/case   # needs velo_result.npz from the above
+```
+
+`optics_sweep.py` — **finite aperture / defocused flow.** Real BOS focuses on the *background*,
+so the density object is deliberately out of focus (Raffel 2015): every ray reaching a pixel
+converges on the same background point but crosses the flow at a different transverse
+position, so the recorded deflection is averaged over a disc. Everything rendered with
+`naper=1, apR=0` is a pinhole and therefore sharper than any real rig. This sweeps f/32 → f/2.8
+with the blur *traced* rather than approximated by post-blurring, using a stated lens geometry
+(Z_A, Z_D, f) so the numbers are reproducible. Measured on a helium jet, the interrogation
+window was coarser than any tested blur, so defocus cost almost nothing in validity (98.2% at
+every aperture) while attenuating peak |d| by 11% at f/2.8.
+
+`bos_velocimetry.py` — **can BOS give velocity?** Note the two corrections recorded in its
+header, both of which were wrong first:
+
+1. An early version scored against a |∇ρ|-weighted velocity. That weighting was an intuition,
+   not a derivation — with `n − 1 = K·ρ` the column mass `m = ∫ρ dz` obeys
+   `∂m/∂t + ∇·(mU) = 0` with `U` the **mass-weighted** projected velocity, so |∇ρ| was
+   arbitrary.
+2. More decisively, *both* weighted quantities need the full 3-D ρ and u fields, which an
+   experimentalist does not have. A reference you cannot compute is not a reference. They are
+   demoted to labelled simulation-only diagnostics; scoring is against what an experiment can
+   access (centreplane PIV, an on-axis probe, the bulk inlet velocity).
+
+The pipeline also correlates the **deflection field** between instants, not warped images of a
+fixed target — correlating the latter returns ~0 shift, because the target never moves and the
+undistorted speckle dominates the peak.
+
+`correction_transfer.py` — **does a CFD-informed correction beat an experiment-only one?**
+Compares a single-probe global scale factor (experiment-only) against a spatial bias profile
+β(x) = U_true/U_bos extracted from a simulation (not measurable). β is fitted on an early half
+of the frames and applied to a held-out late half, because scoring on the fitting half would
+be circular. It also measures whether β drifts between halves — the direct test of the
+objection that the optical weighting varies with flow and time.
