@@ -30,6 +30,7 @@ is won and lost.
 | `gpu/bos_correlate.py` | Speckle warp + windowed FFT cross-correlation with loss-of-pairs correction |
 | `gpu/bos_realistic_target.py` | Printed target + camera model (PSF, shot/read noise, quantisation) |
 | `gpu/bos_window_sweep.py` | Interrogation window size × dot density sweep |
+| `gpu/bos_design_envelope.py` | **Rig sizing before building** — deflection distribution → measurable-fraction vs standoff and window |
 | `gpu/optics_sweep.py` | Finite-aperture / defocus sweep (f/32 → f/2.8), blur traced not post-applied |
 | `gpu/bos_velocimetry.py` | Whether BOS yields velocity — correlates deflection fields between instants |
 | `gpu/correction_transfer.py` | Experiment-only vs CFD-informed bias correction, scored on held-out frames |
