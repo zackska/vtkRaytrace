@@ -1,6 +1,20 @@
 #!/usr/bin/env python3
 """Size a BOS rig BEFORE building it, from a predicted deflection field.
 
+SUPERSEDED IN PART BY bos_setup_optimise.py -- READ THIS FIRST. This script sweeps the
+background distance alone and is wrong in two ways that matter, both per Schmidt et al.,
+AIAA J 63(12) 2025, Sec. IV (10.2514/1.J065669):
+
+  * it uses d = L_bg . eps, which omits the (z_D + z_A - f) denominator of the real
+    sensitivity S = f z_D/(z_D + z_A - f) and so OVERESTIMATES the recorded pixel shift --
+    by 35% at the geometry of the helium-jet renders here;
+  * it ignores that sensitivity and geometric blur are the SAME knob (CoC is linearly
+    proportional to S), so its coverage "ceiling" is reached at a standoff that blurs away
+    the structure being measured. Chasing that peak destroys the measurement.
+
+Kept because the distribution-vs-band picture (panels D/E) is still the right way to see the
+dynamic-range problem. For actual setup design use bos_setup_optimise.py.
+
 THE PROBLEM THIS SOLVES. A correlation window tracks displacements only between a subpixel
 noise floor (~0.1 px) and roughly a quarter of the window. Which part of a flow lands inside
 that band depends on the background standoff L_bg, because d = L_bg.tan(eps). So L_bg is a

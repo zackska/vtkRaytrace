@@ -67,6 +67,31 @@ below about a quarter of the window. `gpu/bos_window_sweep.py` **reproduces** th
 extending it; the README records which of those conditions the helium-jet field violates and
 why a "density beats window size" reading of the sweep is not supportable.
 
+## Setup design: sensitivity and geometric blur
+
+**Schmidt, B. E., Bathel, B. F., Grauer, S. J., Hargather, M. J., Heineck, J. T. & Raffel, M.**
+(2025) *Twenty-Five Years of Background-Oriented Schlieren: Advances and Novel Applications.*
+AIAA Journal **63**(12), 5028–5058.
+[10.2514/1.J065669](https://doi.org/10.2514/1.J065669) —
+author copy free at [NTRS 20240014988](https://ntrs.nasa.gov/citations/20240014988)
+
+Section IV is the basis of `gpu/bos_setup_optimise.py`: the sensitivity factor
+`S = f z_D/(z_D + z_A − f)` (Eqs 22–23), the field-of-view constraint on focal length
+(Eq 24), the circle of confusion `CoC = f² z_D/(f# z_A (z_A + z_D − f))` (Eq 25) and its
+*linear* proportionality to `S`, the result that sensitivity is maximised at
+`z_A/z_B = 0.5`, and the ~50 % of-CoC minimum resolvable feature size (after Schwarz &
+Braukmann). Note the review's literature cut-off is late 2024.
+
+**Rajendran, L. K., Bane, S. P. M. & Vlachos, P. P.** (2019) *Dot tracking methodology for
+background-oriented schlieren (BOS).* Experiments in Fluids **60**(11).
+[10.1007/s00348-019-2793-3](https://doi.org/10.1007/s00348-019-2793-3)
+
+The prior art for synthetic BOS rendering as a setup-design aid — the review cites it as the
+ray-tracing tool for predicting geometric blur from setup parameters, and calls such methods
+"computationally intensive". Its successor from the same group is MIRAGE
+([10.1088/1361-6501/ae4f0a](https://doi.org/10.1088/1361-6501/ae4f0a), 2026), which postdates
+the review.
+
 ## Singular-value coherence diagnostic
 
 **Zamani Ashtiani, S. & Fukami, K.** (2026) *Data-Driven Time-Dependent Bases for Turbulent
