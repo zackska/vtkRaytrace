@@ -97,12 +97,31 @@ the correlation processing, and the datasets — is in
 
 ## Citing
 
-`CITATION.cff` carries the machine-readable metadata (GitHub renders a *Cite this repository*
-button from it). Note it has **no DOI yet** — mint one (e.g. via Zenodo) before citing this in
-a publication, and add it to `CITATION.cff` as a `doi:` field.
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21701176.svg)](https://doi.org/10.5281/zenodo.21701176)
+
+Archived on Zenodo. There are **two DOIs** and the distinction matters:
+
+| DOI | Meaning |
+|---|---|
+| [`10.5281/zenodo.21701176`](https://doi.org/10.5281/zenodo.21701176) | **Concept** — always resolves to the latest release. **Cite this** unless you need to pin a version. |
+| [`10.5281/zenodo.21701177`](https://doi.org/10.5281/zenodo.21701177) | **Version** — v0.1.0 exactly. Use when a paper's results must be reproducible against specific code. |
+
+```bibtex
+@software{falgout_cfd_optical_diagnostics,
+  author    = {Falgout, Zachary},
+  title     = {{cfd-optical-diagnostics}: synthetic shadowgraph, schlieren
+               and BOS rendering from CFD fields},
+  publisher = {Zenodo},
+  doi       = {10.5281/zenodo.21701176},
+  url       = {https://doi.org/10.5281/zenodo.21701176}
+}
+```
+
+`CITATION.cff` carries the same metadata machine-readably — GitHub renders a *Cite this
+repository* button from it.
 
 If you use a specific method rather than the software as a whole, cite the original work from
-`docs/REFERENCES.md` as well.
+[`docs/REFERENCES.md`](docs/REFERENCES.md) as well.
 
 ## License
 

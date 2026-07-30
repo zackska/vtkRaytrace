@@ -12,6 +12,18 @@ authors:
     family-names: Falgout
     orcid: 'https://orcid.org/0000-0002-7768-2084'
     affiliation: SurfSim AB
+version: 0.1.0
+date-released: '2026-07-30'
+doi: 10.5281/zenodo.21701176
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.21701176
+    description: >-
+      Concept DOI - always resolves to the latest release. Cite this
+      unless you need to pin an exact version.
+  - type: doi
+    value: 10.5281/zenodo.21701177
+    description: Version DOI for v0.1.0.
 repository-code: 'https://github.com/zackska/cfd-optical-diagnostics'
 abstract: >-
   Two complementary ray tracers for predicting what a camera would
