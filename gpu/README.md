@@ -126,11 +126,39 @@ matters: measured on a helium-jet field, Gaussian speckle falls to ~81 % valid v
 ink edges carry more high-frequency content, so the correlation peak stands clear of the
 noise floor. Defocus dominates everything else; light level and bit depth barely register.
 
-`bos_window_sweep.py` sweeps interrogation window size against dot density. The usual
-"32 px window" advice is only half the story: at 7.6 dots/window the same 32 px window gave
-3.7 px RMS with a +0.9 px bias, and at 38 dots/window it gave 0.115 px. Across 8–64 px
-windows the **density mattered more than the window size**, so if you need finer windows the
-fix is more dots, not smaller boxes.
+`bos_window_sweep.py` sweeps interrogation window size against dot density. At a fixed 32 px
+window, raising the pattern density transforms the result:
+
+| dots/window | valid % | RMS px | bias px |
+|---|---|---|---|
+| 7.6 | 70.3 | 3.727 | +0.900 |
+| 19.1 | 90.0 | 1.245 | +0.123 |
+| 38.2 | 93.4 | 0.115 | +0.002 |
+
+**This reproduces established PIV theory rather than contradicting it — read it that way.**
+Keane & Adrian's criterion ([10.1088/0957-0233/1/11/013](https://doi.org/10.1088/0957-0233/1/11/013),
+universality re-tested in [10.1088/1361-6501/aafe9d](https://doi.org/10.1088/1361-6501/aafe9d))
+puts high valid-detection probability at roughly **6 effective particle images per window**,
+*conditional on* five other non-dimensional parameters — among them that in-plane displacement
+stays under about a quarter of the window. Two of those conditions are violated here:
+
+- **7.6 dots/window is at the margin, and yield shows it** — 70.3 % valid, not a case of good
+  detection with poor accuracy. Yield and RMS degrade together, exactly as the criterion implies.
+- **The dynamic-range condition is breached at every window size tested.** This field has
+  `max |d| = 38.23 px` against a quarter-window limit of 8 px at 32 px and 16 px even at 64 px,
+  so the tail is out of range throughout. Low yield is over-determined and cannot be attributed
+  to density alone.
+
+At *fixed* low density (0.06) the RMS across 8→64 px windows is **non-monotonic** — 0.417,
+0.958, 1.742, 3.256, 3.727, 2.014, 0.191 px — worst in the middle, because two effects cross:
+small windows hold too few dots while large windows raise the trackable ceiling. Any claim of
+the form "density matters more than window size" is an artefact of reading one column of this
+table in isolation.
+
+The useful, defensible takeaway is narrower: **on a field whose deflection tail exceeds the
+correlation ceiling, satisfying the dots-per-window rule is not sufficient** — check the
+displacement distribution against `win/4` first (see the measurable-envelope section above),
+because no amount of extra dots recovers a shift the window cannot track.
 
 Both take a deflection field as an `.npz` containing `dx`, `dy` (apparent background
 displacement, mm) and `mm_per_px` — i.e. what `gpuShadow` outmodes 5/6 produce:

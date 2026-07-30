@@ -53,6 +53,20 @@ peak-locking and loss-of-pairs behaviour emulated in `gpu/bos_correlate.py`. The
 correction (normalising by the window autocorrelation) matters: without it the recovered
 displacement is systematically ~8% low at 4–6 px shifts.
 
+**Keane, R. D. & Adrian, R. J.** (1990) *Optimization of particle image velocimeters. I.
+Double pulsed systems.* Measurement Science and Technology **1**, 1202.
+[10.1088/0957-0233/1/11/013](https://doi.org/10.1088/0957-0233/1/11/013)
+
+**Scharnowski, S., Sciacchitano, A. & Kähler, C. J.** (2019) *On the universality of Keane &
+Adrian's valid detection probability in PIV.* Measurement Science and Technology **30**.
+[10.1088/1361-6501/aafe9d](https://doi.org/10.1088/1361-6501/aafe9d)
+
+The valid-detection criterion — roughly six effective particle images per interrogation
+window, conditional on five further non-dimensional parameters including in-plane displacement
+below about a quarter of the window. `gpu/bos_window_sweep.py` **reproduces** this rather than
+extending it; the README records which of those conditions the helium-jet field violates and
+why a "density beats window size" reading of the sweep is not supportable.
+
 ## Singular-value coherence diagnostic
 
 **Zamani Ashtiani, S. & Fukami, K.** (2026) *Data-Driven Time-Dependent Bases for Turbulent

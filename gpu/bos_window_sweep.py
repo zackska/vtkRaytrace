@@ -35,6 +35,7 @@ def main():
     WINS = [8, 12, 16, 24, 32, 48, 64]
     DENS = [0.06, 0.15, 0.30]
 
+    rows = []      # persisted; printing alone loses the numbers the moment the shell scrolls
     print(f"{'win':>4} {'step':>5} {'density':>8} {'dots/win':>9} {'limit px':>9} "
           f"{'valid %':>8} {'RMS px':>8} {'bias px':>8} {'vectors':>9}")
     for dens in DENS:
@@ -55,6 +56,9 @@ def main():
             err = rec[ok] - tru[ok]
             rms = float(np.sqrt(np.mean(err ** 2))) if err.size else float('nan')
             bias = float(np.mean(err)) if err.size else float('nan')
+            rows.append(dict(win=win, step=step, density=dens, dots_per_win=float(dots),
+                             limit_px=lim, valid_frac=float(res['valid']), rms_px=rms,
+                             bias_px=bias, n_vectors=int(rec.size), band_px=BAND))
             print(f"{win:>4} {step:>5} {dens:>8.2f} {dots:>9.1f} {lim:>9.1f} "
                   f"{100*res['valid']:>8.1f} {rms:>8.3f} {bias:>+8.3f} {rec.size:>9,}",
                   flush=True)
@@ -63,3 +67,10 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+    out = os.path.splitext(CACHE)[0] + '_window_sweep.npz'
+    np.savez(out, rows=np.array(rows, dtype=object),
+             mm_per_px=mm_per_px, max_true_px=float(fin.max()),
+             median_true_px=float(np.median(fin)), p99_true_px=float(np.percentile(fin, 99)))
+    print(f"\nwrote {out}")
+    print("NOTE: interpret against Keane & Adrian (10.1088/0957-0233/1/11/013) -- see README.")
