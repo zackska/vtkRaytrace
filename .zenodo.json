@@ -1,0 +1,78 @@
+{
+  "upload_type": "software",
+  "title": "cfd-optical-diagnostics: synthetic shadowgraph, schlieren and BOS rendering from CFD fields",
+  "version": "0.1.0",
+  "access_right": "open",
+  "license": "mit",
+  "creators": [
+    {
+      "name": "Falgout, Zachary",
+      "affiliation": "SurfSim AB",
+      "orcid": "0000-0002-7768-2084"
+    }
+  ],
+  "description": "<p>Two complementary ray tracers for predicting what a camera would record looking through a CFD field, plus the detector emulation needed to make a synthetic image comparable to a measurement.</p><p><strong>gpuShadow</strong> (CUDA) marches rays through a sampled volume, one thread per pixel, using hardware trilinear sampling of the field and its gradient. Three ray-physics modes: <em>sharp</em> (Snell refraction with total internal reflection plus Beer&ndash;Lambert attenuation at a resolved interface), <em>eikonal</em> (RK4 march through a graded index, after Sharma et al. 1982), and <em>hybrid</em>. Seven output modes: shadowgraph transmittance, deflection components, classical schlieren via a knife edge at the focal plane, and background-oriented schlieren (BOS) apparent displacement. Finite depth of field is available by thin-lens aperture sampling. A VTK/C++ tracer (<em>ReadSTL</em>) covers the complementary case of a triangulated surface or a single structured-grid volume.</p><p><strong>Detector emulation.</strong> The rendered deflection field is ground truth, which no experiment can read directly. A processing layer therefore reproduces what a real rig records: a printed (hard-edged) background target, optical point-spread function, shot and read noise, quantisation with independent noise per exposure, and windowed FFT cross-correlation with subpixel Gaussian peak fitting and a loss-of-pairs correction. This makes window-scale smoothing, peak-locking and correlation dropout appear in the synthetic result as they do in a measurement.</p><p><strong>Validation and known limits.</strong> Each optical path is checked against a closed-form answer rather than against itself: eikonal deflection to 0.19&nbsp;% on an analytic linear gradient and 7e-4 on a Gaussian phase object; schlieren transmission against the analytic knife-edge relation across sensitivities spanning four orders of magnitude; BOS displacement to ~1.6&nbsp;%; and recovery of known uniform shifts to better than 0.15&nbsp;px. Two limitations are documented rather than implied. The shipped interpolant is trilinear (C0), so the refractive-index gradient is discontinuous across cell faces &mdash; the intended architecture specifies a tricubic C1 interpolant, and the linear-gradient validation cannot expose the difference because the gradient is constant there by construction. And no result in this release is compared against a measurement: all validation is synthetic against analytic. See docs/ARCHITECTURE.md for the full implemented-versus-specified table, and docs/REFERENCES.md for method provenance with DOIs.</p>",
+  "keywords": [
+    "shadowgraphy",
+    "schlieren",
+    "background-oriented schlieren",
+    "synthetic diagnostics",
+    "ray tracing",
+    "computational fluid dynamics",
+    "atomization",
+    "sprays",
+    "OpenFOAM",
+    "CUDA",
+    "VTK"
+  ],
+  "related_identifiers": [
+    {
+      "identifier": "10.1364/AO.21.000984",
+      "relation": "references",
+      "resource_type": "publication-article",
+      "scheme": "doi"
+    },
+    {
+      "identifier": "10.1007/s00348-015-1927-5",
+      "relation": "references",
+      "resource_type": "publication-article",
+      "scheme": "doi"
+    },
+    {
+      "identifier": "10.1007/978-3-642-56640-0",
+      "relation": "references",
+      "resource_type": "publication-book",
+      "scheme": "doi"
+    },
+    {
+      "identifier": "10.1098/rstl.1863.0014",
+      "relation": "references",
+      "resource_type": "publication-article",
+      "scheme": "doi"
+    },
+    {
+      "identifier": "10.1007/s00348-005-0991-7",
+      "relation": "references",
+      "resource_type": "publication-article",
+      "scheme": "doi"
+    },
+    {
+      "identifier": "10.2514/1.J067033",
+      "relation": "references",
+      "resource_type": "publication-article",
+      "scheme": "doi"
+    },
+    {
+      "identifier": "10.1063/5.0107480",
+      "relation": "references",
+      "resource_type": "publication-article",
+      "scheme": "doi"
+    },
+    {
+      "identifier": "10.7488/ds/3459",
+      "relation": "references",
+      "resource_type": "dataset",
+      "scheme": "doi"
+    }
+  ]
+}
