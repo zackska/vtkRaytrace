@@ -88,6 +88,22 @@ and ships analytic validation for each. See `gpu/README.md`.
 The two are complementary rather than redundant: this VTK tracer works from a triangulated
 surface (STL), gpuShadow from a sampled volume.
 
+## References
+
+Provenance for every implemented method — Gladstone–Dale, the Sharma RK4 graded-index ray
+trace, Settles for the knife-edge relation, Raffel for BOS and the defocus geometry, Adrian for
+the correlation processing, and the datasets — is in
+[`docs/REFERENCES.md`](docs/REFERENCES.md), with DOIs resolved against Crossref.
+
+## Citing
+
+`CITATION.cff` carries the machine-readable metadata (GitHub renders a *Cite this repository*
+button from it). Note it has **no DOI yet** — mint one (e.g. via Zenodo) before citing this in
+a publication, and add it to `CITATION.cff` as a `doi:` field.
+
+If you use a specific method rather than the software as a whole, cite the original work from
+`docs/REFERENCES.md` as well.
+
 ## License
 
 MIT - see `LICENSE`.

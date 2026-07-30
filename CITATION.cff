@@ -1,0 +1,38 @@
+cff-version: 1.2.0
+title: >-
+  cfd-optical-diagnostics: synthetic shadowgraph, schlieren and BOS
+  rendering from CFD fields
+message: >-
+  If you use this software, please cite it using the metadata in this
+  file. Provenance for the underlying methods is listed in
+  docs/REFERENCES.md.
+type: software
+authors:
+  - given-names: Zachary
+    family-names: Falgout
+    orcid: 'https://orcid.org/0000-0002-7768-2084'
+    affiliation: SurfSim AB
+repository-code: 'https://github.com/zackska/cfd-optical-diagnostics'
+abstract: >-
+  Two complementary ray tracers for predicting what a camera would
+  record looking through a CFD field, plus the detector emulation
+  needed to make a synthetic image comparable to a measurement. A
+  CUDA renderer (gpuShadow) marches rays through a sampled volume and
+  produces shadowgraph transmittance, deflection fields, classical
+  schlieren and background-oriented schlieren displacement; a VTK/C++
+  tracer handles triangulated surfaces. The BOS path additionally
+  emulates a real rig - printed target, optical PSF, shot and read
+  noise, quantisation, windowed FFT cross-correlation with
+  loss-of-pairs correction - because the ground-truth displacement
+  field is not directly measurable in an experiment.
+keywords:
+  - shadowgraphy
+  - schlieren
+  - background-oriented schlieren
+  - synthetic diagnostics
+  - ray tracing
+  - computational fluid dynamics
+  - atomization
+  - OpenFOAM
+  - CUDA
+license: MIT
