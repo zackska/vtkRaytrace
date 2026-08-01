@@ -106,13 +106,26 @@ fields, which is unnecessary at image sizes where an instantaneous SVD costs mic
 
 ## Experimental dataset
 
-**Liang, C., Johansen, C. T. & Linne, M. A.** (2022) *Characteristics of sprays produced by
-coaxial non-swirling and swirling air-blast atomizers.* Physics of Fluids **34**, 093606.
-[10.1063/5.0107480](https://doi.org/10.1063/5.0107480)
+**Liang, Y., Johansen, L. C. & Linne, M.** (2022) *Breakup of a laminar liquid jet by coaxial
+non-swirling and swirling air streams.* Physics of Fluids **34**(9), 093606.
+[10.1063/5.0100456](https://doi.org/10.1063/5.0100456)
 
 The high-speed shadowgraph dataset `analysis/sigma_gap.py` was developed against, including
-the FWI / SWI / Bag / Fiber regime classification. The data are open at Edinburgh DataShare,
+the FWI / SWI / Bag / Fiber regime classification and the non-dimensional breakup lengths.
+The data are open at Edinburgh DataShare,
 [10.7488/ds/3459](https://doi.org/10.7488/ds/3459).
+
+Atomizer geometry, quoted because downstream comparisons depend on it: liquid tube
+**4 mm** inner / 5 mm outer diameter, gas tube **10 mm** inner / 14 mm outer, liquid Reynolds
+number held at **480** for every flow case. The aerodynamic Weber number is
+`We_A = ρ_g U² D_l / σ_l` with `U` the gas–liquid relative velocity and `D_l` the *liquid tube
+inner diameter*; breakup length and first-droplet location are both normalised by `D_l`.
+
+Note the companion paper, same authors and year, is a **different** reference and is easily
+confused with this one: *Characteristics of sprays produced by coaxial non-swirling and
+swirling air–water jets with high aerodynamic Weber numbers*, Physics of Fluids **34**(10),
+103604, [10.1063/5.0107480](https://doi.org/10.1063/5.0107480). Earlier revisions of this file
+cited a conflation of the two (this DOI, the other's article number and title).
 
 ## Toolkits
 
