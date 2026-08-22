@@ -11,3 +11,8 @@ __pycache__/
 
 # Stray MinGW preprocessor output accidentally generated from .vscode/*.json
 .vscode/*.exe
+
+# Job search agent: personal data stays local (job-search-agent/SPEC.md §12)
+job-search-agent/profile.local.md
+job-search-agent/queue/
+job-search-agent/tracker.csv

@@ -1,0 +1,16 @@
+# Local profile values — NOT COMMITTED
+
+Copy this file to `profile.local.md` and fill in the real values. That filename
+is gitignored (see the repository `.gitignore`), so it stays on the local
+machine. `SPEC.md` §3 points here for every value that should not be published.
+
+Never let the agent quote the rate or salary lines to a third party without
+explicit per-instance human confirmation — `SPEC.md` §9 forbids it.
+
+## Contact
+- Phone: +46 XX XXX XX XX
+- Email: name@example.com
+
+## Compensation references
+- Contract rate reference: XXX–XXX SEK/h
+- Permanent reference: ~XXk SEK/month (adjust upward for lead/specialist roles)
